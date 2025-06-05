@@ -1,0 +1,47 @@
+name: Run Make on Push to Dev
+
+on:
+  push:
+    branches:
+      - dev  # Dieser Workflow wird ausgelöst wenn auf branch dev gepusht wird
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  # Base Image für die VM, in der dieses Repo getestet wird
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2  # Auschecken des Repos an die Laufzeit des Runners
+
+    - name: Set up build environment
+      run: |
+        sudo apt update
+        sudo apt install -y build-essential  # Install necessary build tools (make, gcc, g++)
+
+    - name: Run make # Makefile ausführen
+      run: |
+        make  # Run the make command to build the project
+
+    - name: Set execute permissions for binaries # Auf Linux muss das Ausführen von Executables freigegeben werden
+      run: |
+        chmod +x pipeline_bin/*
+        
+    - name: Test binaries # Wenn Output nicht wie erwartet, wirf einen Fehler, sonst alles in Ordnung
+      run: | 
+        # Run transcribe and capture its output
+        transcribe_output=$(pipeline_bin/transcribe ATGCATGC) 
+        
+        # Check if transcribe output is as expected
+        if [[ "$transcribe_output" != "AUGCAUGC" ]]; then
+          echo "Error: transcribe output is incorrect : Transcrbe output: $transcribe_output; expected value :AUGCAUGC  "
+          exit 1  # Exit with a non-zero status to fail the job
+        fi
+    
+        # Run translate and capture its output
+        translate_output=$(pipeline_bin/translate ATGCATGC)
+        
+        # Check if translate output is as expected
+        if [[ "$translate_output" != "MH" ]]; then
+          echo "Error: translate output is incorrect"
+          exit 1  # Exit with a non-zero status to fail the job
+        fi
